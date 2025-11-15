@@ -21,7 +21,7 @@ services:
       retries: 5
 
   backend:
-    image: docker dirdros/openstreetlifting_backend:latest
+    image: dirdros/openstreetlifting_backend:latest
     container_name: openstreetlifting_web_api
     restart: unless-stopped
     env_file:
@@ -36,6 +36,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${APP_NAME}-production.rule=Host(`api.openstreetlifting.org`)"
+      - "traefik.http.routers.${APP_NAME}-production.tls=true"
+      - "traefik.http.routers.${APP_NAME}-production.entrypoints=web,websecure"
+      - "traefik.http.routers.${APP_NAME}-production.tls.certresolver=letsencrypt"
+      - "traefik.http.services.${APP_NAME}-production.loadbalancer.server.port=8080"
 
 volumes:
   postgres_data:
