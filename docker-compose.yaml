@@ -1,18 +1,17 @@
 # Production deployment with Traefik reverse proxy
 # Prerequisites: Traefik running with 'traefik_public' network, DNS configured
 # Deploy: cp .env.example .env → Edit credentials → docker-compose up -d
-
 services:
   postgres:
     image: postgres:18
     container_name: openstreetlifting_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER:-appuser}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-apppassword}
-      POSTGRES_DB: ${DB_NAME:-appdb}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
       - ./backups:/backups
     networks:
       - traefik_public
@@ -56,12 +55,11 @@ services:
           memory: 128M
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.openstreetlifting.rule=Host(`${DOMAIN:-api.openstreetlifting.org}`)"
+      - "traefik.http.routers.openstreetlifting.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.openstreetlifting.tls=true"
       - "traefik.http.routers.openstreetlifting.entrypoints=web,websecure"
       - "traefik.http.routers.openstreetlifting.tls.certresolver=letsencrypt"
-      - "traefik.http.services.openstreetlifting.loadbalancer.server.port=${PORT:-8080}"
-
+      - "traefik.http.services.openstreetlifting.loadbalancer.server.port=${PORT}"
 volumes:
   postgres_data:
 
