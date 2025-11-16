@@ -1,24 +1,8 @@
-# ==============================================================================
-# OpenStreetLifting - Production Deployment with Traefik
-# ==============================================================================
-# This configuration deploys the application behind Traefik reverse proxy with:
-#   - PostgreSQL 18 database with persistent storage
-#   - Backend API with automatic HTTPS via Let's Encrypt
-#   - Traefik integration for routing and TLS termination
-#
-# Prerequisites:
-#   - Traefik must be running with 'traefik_public' network created
-#   - DNS record for api.openstreetlifting.org pointing to this server
-#
-# Deployment:
-#   1. cp .env.example .env
-#   2. Edit .env with production credentials (DB_PASSWORD, API_KEYS)
-#   3. docker-compose up -d
-#   4. Monitor: docker-compose logs -f
-# ==============================================================================
+# Production deployment with Traefik reverse proxy
+# Prerequisites: Traefik running with 'traefik_public' network, DNS configured
+# Deploy: cp .env.example .env → Edit credentials → docker-compose up -d
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:18
     container_name: openstreetlifting_postgres
@@ -27,9 +11,6 @@ services:
       POSTGRES_USER: ${DB_USER:-appuser}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-apppassword}
       POSTGRES_DB: ${DB_NAME:-appdb}
-    ports:
-      # Optional: Expose database port for external access (comment out for security)
-      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
@@ -40,34 +21,46 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
-  # Actix-web Backend API
   backend:
-    image: dirdros/openstreetlifting_backend:latest
+    image: dirdros/openstreetlifting_backend:${BACKEND_VERSION:-latest}
     container_name: openstreetlifting_web_api
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      # Database connection (internal container networking)
       DB_HOST: postgres
-      DATABASE_URL: postgresql://${DB_USER:-appuser}:${DB_PASSWORD:-apppassword}@postgres:5432/${DB_NAME:-appdb}
-      # Server configuration (loaded from .env for flexibility)
-      HOST: ${HOST:-0.0.0.0}
-      PORT: ${PORT:-8080}
+      HOST: 0.0.0.0
     networks:
       - traefik_public
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${PORT:-8080}/api-docs/openapi.json || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
     labels:
-      # Traefik routing configuration
       - "traefik.enable=true"
-      - "traefik.http.routers.${APP_NAME:-openstreetlifting}-production.rule=Host(`api.openstreetlifting.org`)"
-      - "traefik.http.routers.${APP_NAME:-openstreetlifting}-production.tls=true"
-      - "traefik.http.routers.${APP_NAME:-openstreetlifting}-production.entrypoints=web,websecure"
-      - "traefik.http.routers.${APP_NAME:-openstreetlifting}-production.tls.certresolver=letsencrypt"
-      - "traefik.http.services.${APP_NAME:-openstreetlifting}-production.loadbalancer.server.port=${PORT:-8080}"
+      - "traefik.http.routers.openstreetlifting.rule=Host(`${DOMAIN:-api.openstreetlifting.org}`)"
+      - "traefik.http.routers.openstreetlifting.tls=true"
+      - "traefik.http.routers.openstreetlifting.entrypoints=web,websecure"
+      - "traefik.http.routers.openstreetlifting.tls.certresolver=letsencrypt"
+      - "traefik.http.services.openstreetlifting.loadbalancer.server.port=${PORT:-8080}"
 
 volumes:
   postgres_data:
