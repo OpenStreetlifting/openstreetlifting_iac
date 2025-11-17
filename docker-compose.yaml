@@ -37,6 +37,7 @@ services:
       DB_HOST: postgres
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
       HOST: 0.0.0.0
+      PORT: ${BACKEND_PORT:-8080}
     networks:
       - traefik_public
     depends_on:
@@ -46,7 +47,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "curl -f http://localhost:${PORT:-8080}/api-docs/openapi.json || exit 1",
+          "curl -f http://localhost:${BACKEND_PORT:-8080}/api-docs/openapi.json || exit 1",
         ]
       interval: 30s
       timeout: 10s
@@ -64,12 +65,14 @@ services:
       - "traefik.http.routers.openstreetlifting-backend.tls=true"
       - "traefik.http.routers.openstreetlifting-backend.entrypoints=web,websecure"
       - "traefik.http.routers.openstreetlifting-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.openstreetlifting-backend.loadbalancer.server.port=${PORT}"
+      - "traefik.http.services.openstreetlifting-backend.loadbalancer.server.port=${BACKEND_PORT:-8080}"
 
   frontend:
     image: dirdros/openstreetlifting-frontend:${FRONTEND_VERSION:-latest}
     container_name: openstreetlifting_frontend
-
+    restart: unless-stopped
+    networks:
+      - traefik_public
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.openstreetlifting-frontend.rule=Host(`${DOMAIN}`)"
@@ -77,8 +80,6 @@ services:
       - "traefik.http.routers.openstreetlifting-frontend.entrypoints=web,websecure"
       - "traefik.http.routers.openstreetlifting-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.openstreetlifting-frontend.loadbalancer.server.port=${FRONTEND_PORT}"
-
-    restart: unless-stopped
 volumes:
   postgres_data:
 
