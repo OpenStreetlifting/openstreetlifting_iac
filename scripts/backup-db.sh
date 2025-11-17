@@ -2,7 +2,23 @@
 set -euo pipefail
 
 # Database Backup Script for OpenStreetLifting
-# This script creates PostgreSQL backups and optionally uploads them to multiple locations
+# Creates local PostgreSQL backups and uploads to S3
+#
+# USAGE:
+#   ./scripts/backup-db.sh
+#
+# SETUP AWS S3 BACKUPS:
+# 1. Get AWS Access Key:
+#    - AWS Console → IAM → Users → [Your user] → Security credentials
+#    - Click "Create access key" → Choose "Application running outside AWS"
+#    - Save the Access Key ID and Secret Access Key
+# 2. Find your bucket region:
+#    - AWS Console → S3 → [Your bucket] → Properties → AWS Region
+# 3. Add to .env file:
+#    AWS_ACCESS_KEY_ID=AKIA...
+#    AWS_SECRET_ACCESS_KEY=your_secret_key
+#    AWS_DEFAULT_REGION=us-east-1
+#    S3_BUCKET=s3://your-bucket-name/openstreetlifting-backups
 
 # Load environment variables
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
