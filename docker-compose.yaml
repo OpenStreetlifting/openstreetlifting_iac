@@ -80,6 +80,9 @@ services:
       - "traefik.http.routers.openstreetlifting-frontend.entrypoints=web,websecure"
       - "traefik.http.routers.openstreetlifting-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.openstreetlifting-frontend.loadbalancer.server.port=3000"
+      # BasicAuth middleware
+      - "traefik.http.middlewares.openstreetlifting-frontend-auth.basicauth.users=${FRONTEND_AUTH_HASH}"
+      - "traefik.http.routers.openstreetlifting-frontend.middlewares=openstreetlifting-frontend-auth"
 
   importer:
     image: dirdros/openstreetlifting_backend:${BACKEND_VERSION:-latest}
